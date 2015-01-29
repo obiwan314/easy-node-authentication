@@ -4,13 +4,9 @@
 module.exports = {
 
 	'runsignupAuth' : {
-		requestTokenURL: 'https://runsignup.com/oauth/requestToken.php',
-		accessTokenURL: 'https://runsignup.com/oauth/accessToken.php',
-		userAuthorizationURL: 'https://runsignup.com/OAuth/Verify',
 		consumerKey: "your-consumer-key-here",
 		consumerSecret: "your-consumer-secret-here",
-		callbackURL: "http://localhost:8080/auth/runsignup/callback",    // Must Match registered URL!
-		userProfileURL:"https://runsignup.com/rest/user"
+		callbackURL: "http://localhost:8080/auth/runsignup/callback" // Must Match registered URL or you will get a 404
 	},
 
 	'facebookAuth' : {

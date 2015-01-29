@@ -3,7 +3,7 @@ var LocalStrategy    = require('passport-local').Strategy;
 var FacebookStrategy = require('passport-facebook').Strategy;
 var TwitterStrategy  = require('passport-twitter').Strategy;
 var GoogleStrategy   = require('passport-google-oauth').OAuth2Strategy;
-var RunSignUpStrategy = require('passport-oauth1').Strategy;
+var RunSignUpStrategy = require('../lib/passport-runsignup').Strategy;
 
 // load up the user model
 var User       = require('../app/models/user');
@@ -149,14 +149,8 @@ module.exports = function(passport) {
             userAuthorizationURL: configAuth.runsignupAuth.userAuthorizationURL,
             consumerKey: configAuth.runsignupAuth.consumerKey,
             consumerSecret: configAuth.runsignupAuth.consumerSecret,
-            callbackURL:  configAuth.runsignupAuth.callbackURL
-
-            //
-            //clientID        : configAuth.facebookAuth.clientID,
-            //clientSecret    : configAuth.facebookAuth.clientSecret,
-            //callbackURL     : configAuth.facebookAuth.callbackURL,
-            //passReqToCallback : true // allows us to pass in the req from our route (lets us check if a user is logged in or not)
-
+            callbackURL:  configAuth.runsignupAuth.callbackURL,
+            userProfileURL:configAuth.runsignupAuth.userProfileURL
         },
         function(token, tokenSecret, profile, done) {
 
@@ -228,44 +222,6 @@ module.exports = function(passport) {
             });
 
         });
-
-    newRunSignUpStrategy.userProfile=function(token, tokenSecret, params, done){
-        // Take the token and secret and make an API call
-        // To Identify this user
-        var json;
-
-        this._oauth.get("https://runsignup.com/rest/user?format=json" , token, tokenSecret, function (err, body, res) {
-            if (err) {
-                if (err.data) {
-                    try {
-                        json = JSON.parse(err.data);
-                    } catch (_) {}
-                }
-
-                if (json && json.errors && json.errors.length) {
-                    var e = json.errors[0];
-                    return done(new APIError(e.message, e.code));
-                }
-                return done(new InternalOAuthError('Failed to fetch user profile', err));
-            }
-            var rsprofile=null;
-            try {
-                rsprofile = JSON.parse(body);
-            } catch (ex) {
-                return done(new Error('Failed to parse user profile'));
-            }
-
-            return done(null,
-                {
-                    id:rsprofile.user.user_id,
-                    provider:"runsignup",
-                    name:{givenName:rsprofile.user.first_name,familyName:rsprofile.user.last_name},
-                    emails:[rsprofile.user.email]
-                }
-            );
-        });
-    }
-
 
     passport.use('runsignup', newRunSignUpStrategy);
 
