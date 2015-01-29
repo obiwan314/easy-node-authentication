@@ -3,6 +3,7 @@ var LocalStrategy    = require('passport-local').Strategy;
 var FacebookStrategy = require('passport-facebook').Strategy;
 var TwitterStrategy  = require('passport-twitter').Strategy;
 var GoogleStrategy   = require('passport-google-oauth').OAuth2Strategy;
+var RunSignUpStrategy = require('passport-oauth1').Strategy;
 
 // load up the user model
 var User       = require('../app/models/user');
@@ -138,6 +139,136 @@ module.exports = function(passport) {
         });
 
     }));
+
+    // =========================================================================
+    // RUNSIGNUP ================================================================
+    // =========================================================================
+    var newRunSignUpStrategy=new RunSignUpStrategy({
+            requestTokenURL: configAuth.runsignupAuth.requestTokenURL,
+            accessTokenURL: configAuth.runsignupAuth.accessTokenURL,
+            userAuthorizationURL: configAuth.runsignupAuth.userAuthorizationURL,
+            consumerKey: configAuth.runsignupAuth.consumerKey,
+            consumerSecret: configAuth.runsignupAuth.consumerSecret,
+            callbackURL:  configAuth.runsignupAuth.callbackURL
+
+            //
+            //clientID        : configAuth.facebookAuth.clientID,
+            //clientSecret    : configAuth.facebookAuth.clientSecret,
+            //callbackURL     : configAuth.facebookAuth.callbackURL,
+            //passReqToCallback : true // allows us to pass in the req from our route (lets us check if a user is logged in or not)
+
+        },
+        function(token, tokenSecret, profile, done) {
+
+            // asynchronous
+            process.nextTick(function() {
+
+                // check if the user is already logged in
+                if (!user) {
+
+                    User.findOne({ 'runsignup.id' : profile.id }, function(err, user) {
+                        if (err)
+                            return done(err);
+
+                        if (user) {
+
+                            // if there is a user id already but no token (user was linked at one point and then removed)
+                            if (!user.runsignup.token) {
+                                user.runsignup.token = token;
+                                user.runsignup.tokenSecret = tokenSecret;
+                                user.runsignup.name  = profile.name.givenName + ' ' + profile.name.familyName;
+                                user.runsignup.email = profile.emails[0].toLowerCase();
+
+                                user.save(function(err) {
+                                    if (err)
+                                        return done(err);
+
+                                    return done(null, user);
+                                });
+                            }
+
+                            return done(null, user); // user found, return that user
+                        } else {
+                            // if there is no user, create them
+                            var newUser            = new User();
+
+                            newUser.runsignup.id    = profile.id;
+                            newUser.runsignup.token = token;
+                            newUser.runsignup.tokenSecret = tokenSecret;
+                            newUser.runsignup.name  = profile.name.givenName + ' ' + profile.name.familyName;
+                            newUser.runsignup.email = (profile.emails[0].value || '').toLowerCase();
+
+                            newUser.save(function(err) {
+                                if (err)
+                                    return done(err);
+
+                                return done(null, newUser);
+                            });
+                        }
+                    });
+
+                } else {
+                    // user already exists and is logged in, we have to link accounts
+                    var user            = req.user; // pull the user out of the session
+
+                    user.runsignup.id    = profile.id;
+                    user.runsignup.token = token;
+                    user.runsignup.tokenSecret = tokenSecret
+                    user.runsignup.displayName  = profile.name.givenName + ' ' + profile.name.familyName;
+                    user.runsignup.email = (profile.emails[0].value || '').toLowerCase();
+
+                    user.save(function(err) {
+                        if (err)
+                            return done(err);
+
+                        return done(null, user);
+                    });
+
+                }
+            });
+
+        });
+
+    newRunSignUpStrategy.userProfile=function(token, tokenSecret, params, done){
+        // Take the token and secret and make an API call
+        // To Identify this user
+        var json;
+
+        this._oauth.get("https://runsignup.com/rest/user?format=json" , token, tokenSecret, function (err, body, res) {
+            if (err) {
+                if (err.data) {
+                    try {
+                        json = JSON.parse(err.data);
+                    } catch (_) {}
+                }
+
+                if (json && json.errors && json.errors.length) {
+                    var e = json.errors[0];
+                    return done(new APIError(e.message, e.code));
+                }
+                return done(new InternalOAuthError('Failed to fetch user profile', err));
+            }
+            var rsprofile=null;
+            try {
+                rsprofile = JSON.parse(body);
+            } catch (ex) {
+                return done(new Error('Failed to parse user profile'));
+            }
+
+            return done(null,
+                {
+                    id:rsprofile.user.user_id,
+                    provider:"runsignup",
+                    name:{givenName:rsprofile.user.first_name,familyName:rsprofile.user.last_name},
+                    emails:[rsprofile.user.email]
+                }
+            );
+        });
+    }
+
+
+    passport.use('runsignup', newRunSignUpStrategy);
+
 
     // =========================================================================
     // FACEBOOK ================================================================

@@ -38,6 +38,27 @@
 			</div>
 		</div>
 
+		<!-- RUNSIGNUP INFORMATION -->
+		<div class="col-sm-6">
+			<div class="well">
+				<h3><span class="fa fa-user"></span> RunSignUp</h3>
+
+				<% if (user.runsignup.token) { %>
+					<p>
+						<strong>id</strong>: <%= user.runsignup.id %><br>
+						<strong>token</strong>: <%= user.runsignup.token %><br>
+						<strong>display name</strong>: <%= user.runsignup.name %><br>
+						<strong>email</strong>: <%= user.runsignup.email %>
+					</p>
+
+					<a href="/unlink/runsignup" class="btn btn-default">Unlink</a>
+				<% } else { %>
+					<a href="/connect/runsignup" class="btn btn-default">Connect RunSignUp</a>
+				<% } %>
+
+			</div>
+		</div>
+
 		<!-- FACEBOOK INFORMATION -->
 		<div class="col-sm-6">
 			<div class="well">

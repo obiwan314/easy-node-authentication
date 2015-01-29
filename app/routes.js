@@ -51,6 +51,18 @@ module.exports = function(app, passport) {
 			failureFlash : true // allow flash messages
 		}));
 
+	// runsignup -------------------------------
+
+	// send to facebook to do the authentication
+	app.get('/auth/runsignup', passport.authenticate('runsignup', { scope : 'email' }));
+
+	// handle the callback after facebook has authenticated the user
+	app.get('/auth/runsignup/callback',
+		passport.authenticate('runsignup', {
+			successRedirect : '/profile',
+			failureRedirect : '/'
+		}));
+
 	// facebook -------------------------------
 
 		// send to facebook to do the authentication
@@ -100,6 +112,18 @@ module.exports = function(app, passport) {
 			successRedirect : '/profile', // redirect to the secure profile section
 			failureRedirect : '/connect/local', // redirect back to the signup page if there is an error
 			failureFlash : true // allow flash messages
+		}));
+
+	// runsignup -------------------------------
+
+	// send to facebook to do the authentication
+	app.get('/connect/runsignup', passport.authorize('runsignup', { scope : 'email' }));
+
+	// handle the callback after facebook has authorized the user
+	app.get('/connect/runsignup/callback',
+		passport.authorize('runsignup', {
+			successRedirect : '/profile',
+			failureRedirect : '/'
 		}));
 
 	// facebook -------------------------------
@@ -155,6 +179,16 @@ module.exports = function(app, passport) {
 			res.redirect('/profile');
 		});
 	});
+
+	// runsignup -------------------------------
+	app.get('/unlink/runsignup', isLoggedIn, function(req, res) {
+		var user            = req.user;
+		user.runsignup.token = undefined;
+		user.save(function(err) {
+			res.redirect('/profile');
+		});
+	});
+
 
 	// facebook -------------------------------
 	app.get('/unlink/facebook', isLoggedIn, function(req, res) {
